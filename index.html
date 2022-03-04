@@ -1,0 +1,82 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" type="text/css" href="photoviewer/core.css" />
+<script type="text/javascript" src="http://apps.bdimg.com/libs/jquery/1.8.3/jquery.min.js"></script>
+<script type="text/javascript" src="photoviewer/core.js"></script>
+    <style>
+    body {
+        background-color: #000000;
+    }
+</style>
+</head>
+<body>
+<form>
+
+    <label for="path">搜索路径:</label><br>
+    <input type="text" id="path" placeholder="搜索路径" autocomplete="on">
+    <input type="button" id="submit_path" value="设置路径"><br>
+</form>
+<script>
+    show_path();
+    $(function() {
+        $('#submit_path').click(function() {
+            // ajax
+            var search_path = document.getElementById("path").value;
+            history.replaceState("", "", "index.html?"+search_path);
+            $.ajax({
+                type: "POST",
+                url: "http://10.9.3.201:5001/ass",
+                data:{'search_path_backend':search_path},
+                dataType: 'json',
+                success: function() {
+                    show();
+
+                }
+            });
+        });
+    });
+
+
+    function show() {
+		//var pv = PhotoViewer.getInstance(setPath);
+        //window.location.search=search_path;
+        var pv =PhotoViewer.getInstance("");
+        var index =0;
+		const URL_1='http://10.9.3.201:5001/list_img';
+		$.ajax({
+                    type: "POST",
+                    url: URL_1,
+                    dataType: 'json',
+					data:{"index":index},
+                    success: function(result) {
+                        // alert(result);
+                        var re = JSON.stringify(result);
+                        var re1=JSON.parse(re);
+                        pv.show(re1,index);
+                    },
+                    error:function (){
+                        alert("后端服务器未开启");
+                    }
+                });
+	}
+    function get_research(){
+        if (window.location.search.search("_ijt=")==-1){
+            var input_path = window.location.search;
+            var search_data_path = input_path.slice(1, input_path.length);
+            return search_data_path;
+        }
+        else{
+            return "";
+        }
+    }
+    function show_path() {
+        var st = get_research();
+        console.log(st);
+        document.getElementById("path").value = st;
+    }
+
+</script>
+</body>
+</html>
