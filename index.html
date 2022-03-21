@@ -1,0 +1,168 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" type="text/css" href="photoviewer/core.css"/>
+    <script type="text/javascript" src="http://apps.bdimg.com/libs/jquery/1.8.3/jquery.min.js"></script>
+    <script type="text/javascript" src="photoviewer/core.js"></script>
+    <link rel="stylesheet" href="//code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
+    <script src="//code.jquery.com/jquery-1.10.2.js"></script>
+    <script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
+    <style>
+        body {
+            background-color: #000000;
+        }
+    </style>
+</head>
+<body>
+<select id="pic_names" onchange="get_click()" size="50">
+</select>
+<label id="png">png 数量 :</label><label id="num_png">0</label>
+<label id="jpg">jpg 数量 :</label><label id="num_jpg">0</label>
+<label id="num_img">第</label><label id="number_img">0</label>
+<form>
+
+    <textarea id="path" cols="40" rows="4" style="font-size:16px;width:1000px;"></textarea>
+    <br>
+    <input type="button" id="submit_path" value="设置路径">
+    <br>
+    <input type="button" id="outer_submit_img" value="跳转图片">
+    <br>
+</form>
+<script>
+    $("#pic_names").hide();
+    $("#outer_submit_img").hide();
+    $("#number_img").hide();
+    $("#num_img").hide();
+
+
+    show_path();//解析浏览器中带有的地址
+
+    if (show_path() != '') {//带有地址时开始显示图片
+        init_pv();
+    }
+    return_list();
+
+    $(function () {
+        $('#submit_path').click(function () {
+            var search_path = document.getElementById("path").value;
+            history.replaceState("", "", "index.html?" + search_path);
+            init_pv();
+        });
+    });
+
+    function get_click() {
+        var options = $('#pic_names option:selected');
+        var number = options.val();
+        var show_number = parseInt(number) + 1;
+        $("#number_img").show();
+        $("#num_img").show();
+        document.getElementById('number_img').innerText = show_number.toString() + ' ' + '张';
+    }
+
+    function get_inner_click() {
+        var options = $('#inner_img_select option:selected');
+        var number = options.val();
+        pv.get_inner_index(parseInt(number));
+    }
+
+    function init_pv(default_index = 0, default_search_path = show_path()) {//生成图片查看器对象
+        var search_path = default_search_path;
+        if (search_path.substring(search_path.length - 1) == '/') {
+            search_path = search_path.substring(0, search_path.length - 1);
+        }
+        pv = PhotoViewer.getInstance(encodeURIComponent(search_path));
+        var index = default_index;
+        //const URL_1='http://0.0.0.0:5001/list_img';
+        const URL_1 = 'http://10.9.3.201:5001/list_img';
+        $.ajax({
+            type: "GET",
+            url: URL_1,
+            dataType: 'json',
+            data: {"read_ssh_path": search_path},
+            success: function (result) {
+                var re = JSON.stringify(result);
+                var re1 = JSON.parse(re);
+                pv.show(re1, index);
+            },
+            error: function () {
+                alert("后端服务器未开启");
+            }
+        });
+    }
+
+    function get_research() {
+        if (window.location.search.search("_ijt=") == -1) {
+            var input_path = window.location.href;
+            var search_data_path = input_path.split('?')[1];
+            return search_data_path;
+        } else {
+            return "";
+        }
+    }
+
+    //将url中的地址同步到输入框中
+    function show_path() {
+        var st = get_research();
+        document.getElementById("path").value = st;
+        return st;
+    }
+
+
+    function return_list() {//做输入路径的自动补全，每当输入'/'时就进行搜索
+        $(document).keydown(function (e) {
+
+            var leng = document.getElementById('path').value;
+            if (e.keyCode == 191 || (e.keyCode == 8 && leng.charAt(leng.length - 1) == '/')) {
+                $.ajax({
+                    type: "POST",
+                    url: "http://10.9.3.201:5001/query",
+                    data: {'read': leng, 'keycode': e.keyCode},
+                    dataType: 'json',
+                    success: function (result) {
+                        var re = JSON.stringify(result);
+                        var re1 = JSON.parse(re);
+                        avaliableTags = re1['file_list'];
+                        document.getElementById('num_jpg').innerText = re1['num_jpg'];
+                        document.getElementById('num_png').innerText = re1['num_png'];
+                        if (re1['num_jpg'] != 0 || re1['num_png'] != 0) {
+                            images_list = (re1['img_list']);
+                            document.getElementById('pic_names').options.length = 0;
+                            selections = document.getElementById('pic_names')
+                            for (let i = 0; i < images_list.length; ++i) {
+                                var opt = new Option(images_list[i], i);//创建图片列表
+                                selections.options.add(opt);
+                            }
+                            $("#pic_names").show();
+                            $("#outer_submit_img").show();
+                            $("#number_img").hide();
+                            $("#num_img").hide();
+                            $(function () {
+                                $('#outer_submit_img').click(function () {
+
+                                    var options = $('#pic_names option:selected');
+                                    var index =options.val();
+                                    init_pv(parseInt(index), leng);
+                                    history.replaceState("", "", "index.html?" + leng);
+                                });
+                            });
+
+                        }
+                        $(function () {
+
+                            $("#path").autocomplete({
+                                source: avaliableTags
+                            });
+                        });
+
+                    }
+                });
+            }
+        });
+
+    }
+
+
+</script>
+</body>
+</html>
